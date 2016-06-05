@@ -14,58 +14,44 @@ canvas {
 
 var handleMove
 
-function startShape(event) {
-  var path = [
-    [event.clientX, event.clientY]
-  ]
+var strokes = []
 
-  handleMove = addPoint.bind(null, path)
-  handleUp = finishShape.bind(null, path)
+function startShape(event) {
+  var stroke = {
+    path: [
+      [event.clientX, event.clientY]
+    ]
+  }
+
+  strokes.push(stroke)
+
+  handleMove = addPoint.bind(null, stroke.path)
+  handleUp = finishShape.bind(null, stroke.path)
 }
 
 function addPoint(path, event) {
   path.push([event.clientX, event.clientY])
 
-  drawScene(pathToShape(path))
+  drawStrokes()
+}
+
+function drawStrokes() {
+  var shapes = []
+  strokes.forEach(function(stroke) {
+    shapes = shapes.concat(pathToShapes(stroke.path))
+  })
+
+  drawScene(shapes)
 }
 
 var shapes = []
 
 function finishShape(path, event) {
-  debugger
-  path.push([event.clientX, event.clientY])
-
-  var shape = {
-    points: [path[0], path[path.length]]
-  }
-
-  shapes.push(shape)
-
-  drawScene(buildScene(shapes))
   handleMove = null
   handleUp = null
 }
 
-function buildScene(strokes) {
-  var shapes = []
-
-  for(var i=0; i<strokes.length; i++) {
-    var stroke = strokes[i]
-
-    if (stroke.points.length == 2) {
-
-      shapes = shapes.concat(pointsToDiamondShapes(stroke.points))
-
-
-
-
-    }
-
-  }
-}
-
-
-function pathToShape(path) {
+function pathToShapes(path) {
   var shapes = []
 
   var last = path.length-1
