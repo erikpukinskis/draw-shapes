@@ -5,6 +5,7 @@ canvas {
   border: 1px solid #eee;
 }
 </style>
+<script src="../build/gl-matrix.js"></script>
 <script src="../build/draw-scene.js"></script>
 
 <canvas width="400" height="400" onmousedown="startShape(event)"></canvas>
@@ -19,6 +20,7 @@ function startShape(event) {
   ]
 
   handleMove = addPoint.bind(null, path)
+  handleUp = finishShape.bind(null, path)
 }
 
 function addPoint(path, event) {
@@ -27,30 +29,97 @@ function addPoint(path, event) {
   drawScene(pathToShape(path))
 }
 
+var shapes = []
+
+function finishShape(path, event) {
+  debugger
+  path.push([event.clientX, event.clientY])
+
+  var shape = {
+    points: [path[0], path[path.length]]
+  }
+
+  shapes.push(shape)
+
+  drawScene(buildScene(shapes))
+  handleMove = null
+  handleUp = null
+}
+
+function buildScene(strokes) {
+  var shapes = []
+
+  for(var i=0; i<strokes.length; i++) {
+    var stroke = strokes[i]
+
+    if (stroke.points.length == 2) {
+
+      shapes = shapes.concat(pointsToDiamondShapes(stroke.points))
+
+
+
+
+    }
+
+  }
+}
+
+
 function pathToShape(path) {
   var shapes = []
 
   var last = path.length-1
 
-  verticies = [
-     path[0][0],  -path[0][1],  0.0,
-     path[last][0], -path[last][1],  0.0,
-     0.0, 0.0,  0.0
+  var firstPoint = [
+    path[0][0], 
+    -path[0][1],
+    0.0
   ]
 
-  shapes.push({
+  var lastPoint = [
+    path[last][0],
+    -path[last][1],
+    0.0
+  ]
+
+  var out = []
+  var midPoint = []
+  var otherMidPoint = []
+
+  vec3.subtract(out, lastPoint, firstPoint)
+
+  vec3.scale(out, out, 0.5)
+
+  vec3.add(out, firstPoint, out)
+
+  var distance = vec3.distance(firstPoint, lastPoint)
+
+  var thickness = (7 - Math.log(distance)) / 8.0
+
+  vec3.rotateZ(midPoint, out, firstPoint, thickness)
+
+  vec3.rotateZ(otherMidPoint, out, firstPoint, -thickness)
+
+  return [
+    triangle(firstPoint, midPoint, lastPoint),
+    triangle(firstPoint, otherMidPoint, lastPoint)
+  ]
+}
+
+function triangle(a,b,c) {
+  return {
     position: [0.0, 0.0, 0.0],
-    verticies: verticies,
+    verticies: a.concat(b,c),
     pointCount: 3,
     colors: [
       1.0, 0.4, 0.6, 1.0,
       0.9, 0.4, 0.7, 1.0,
       0.8, 0.4, 0.9, 1.0
     ]
-  })
+  }
 
-  return shapes
 }
+
 
 var camera = {
   fovy: 45,
@@ -60,7 +129,7 @@ var camera = {
   yaw: 0.0,
   xPos: -205.0,
   yPos: 205.0,
-  zPos: -500.0  
+  zPos: -340.0  
 }
 
 drawScene.init(camera)
@@ -70,7 +139,10 @@ window.onmousemove = function(event) {
   handleMove(event)
 }
 
-// drawScene(pathToShape([[107,277],[107,273],[107,267],[107,264],[107,261],[107,258],[107,246],[107,233],[109,220],[114,210],[122,199]]))
+window.onmouseup = function(event) {
+  if (!handleUp) { return }
+  handleUp(event)
+}
 
 </script>
 
