@@ -8,19 +8,117 @@ canvas {
 <script src="../build/gl-matrix.js"></script>
 <script src="../build/draw-scene.js"></script>
 
-<canvas width="400" height="400" onmousedown="startShape(event)"></canvas>
+<canvas width="400" height="400" onmousedown="down(event)"></canvas>
 
 <script>
 
 var handleMove
 
 var strokes = []
+var triangles = []
 
-function startShape(event) {
+function down(event) {
+  var point = [event.clientX, event.clientY]
+
+  for(var i=0; i<triangles.length; i++) {
+    var triangle = triangles[i]
+
+    var testPoint = [point[0], -point[1], 0.0]
+
+    if (pointInTriangle(testPoint, triangle)) {
+      var stroke = triangle[3]
+      continue
+    }
+  }
+
+  if (stroke) {
+    console.log("budge it!")
+  } else {
+    console.log("not in it")
+    startShape(point)
+  }
+}
+
+
+function sameSide(p1,p2, a,b) {
+    var xa = []
+    var xb = []
+    var xb2 = []
+    var cp1 = []
+    var cp2 = []
+
+    vec3.subtract(xa, b, a)
+    vec3.subtract(xb, p1, a)
+    vec3.cross(cp1, xa, xb)
+
+    vec3.subtract(xb2, p2, a)
+    vec3.cross(cp2, xa, xb2)
+
+    var isSame = vec3.dot(cp1, cp2) >= 0
+
+    return isSame
+}
+
+
+function fastPointInTriangle(p, triangle) {
+
+  // from http://www.blackpawn.com/texts/pointinpoly/
+
+  var a = triangle[0] 
+  var b = triangle[1] 
+  var c = triangle[2] 
+
+  var isInside =
+    sameSide(p,a, b,c) 
+    && sameSide(p,b, a,c)
+    && sameSide(p,c, a,b)
+
+  return isInside
+}
+
+var p = [2,1,0]
+var a = [1,1,0]
+var b = [2,3,0]
+var c = [4,1,0]
+
+pointInTriangle(p, [a,b,c])
+
+function pointInTriangle(p, triangle) {
+  
+  var a = triangle[0]
+  var b = triangle[1] 
+  var c = triangle[2] 
+
+  var probeA = []
+  var probeB = []
+  var probeC = []
+
+  vec3.subtract(probeA, a, p)
+  vec3.subtract(probeB, b, p)
+  vec3.subtract(probeC, c, p)
+
+  var angles = [
+    vec3.angle(probeA, probeB),
+    vec3.angle(probeB, probeC),
+    vec3.angle(probeC, probeA),
+  ]
+
+  var totalAngle =
+    vec3.angle(probeA, probeB)
+    + vec3.angle(probeB, probeC)
+    + vec3.angle(probeC, probeA)
+
+  var isInside = 2*Math.PI - totalAngle < 0.01
+
+  return isInside
+}
+
+
+
+
+function startShape(point) {
   var stroke = {
-    path: [
-      [event.clientX, event.clientY]
-    ]
+    path: [point]
   }
 
   strokes.push(stroke)
@@ -37,8 +135,9 @@ function addPoint(path, event) {
 
 function drawStrokes() {
   var shapes = []
+  triangles = []
   strokes.forEach(function(stroke) {
-    shapes = shapes.concat(pathToShapes(stroke.path))
+    shapes = shapes.concat(pathToShapes(stroke))
   })
 
   drawScene(shapes)
@@ -51,8 +150,8 @@ function finishShape(path, event) {
   handleUp = null
 }
 
-function pathToShapes(path) {
-  var shapes = []
+function pathToShapes(stroke) {
+  var path = stroke.path
 
   var last = path.length-1
 
@@ -85,6 +184,10 @@ function pathToShapes(path) {
   vec3.rotateZ(midPoint, out, firstPoint, thickness)
 
   vec3.rotateZ(otherMidPoint, out, firstPoint, -thickness)
+
+  triangles.push([firstPoint, midPoint, lastPoint, stroke])
+
+  triangles.push([firstPoint, otherMidPoint, lastPoint, stroke])
 
   return [
     triangle(firstPoint, midPoint, lastPoint),
