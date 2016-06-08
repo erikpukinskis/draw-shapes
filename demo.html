@@ -18,70 +18,28 @@ var strokes = []
 var triangles = []
 
 function down(event) {
-  var point = [event.clientX, event.clientY]
+  var coordinates = [event.clientX, event.clientY]
+
+  var stroke
 
   for(var i=0; i<triangles.length; i++) {
     var triangle = triangles[i]
 
-    var testPoint = [point[0], -point[1], 0.0]
+    var testPoint = screenCoordToPoint(coordinates)
 
     if (pointInTriangle(testPoint, triangle)) {
-      var stroke = triangle[3]
+      stroke = triangle[3]
       continue
     }
   }
 
   if (stroke) {
-    console.log("budge it!")
+    startStretch(coordinates, stroke)
   } else {
-    console.log("not in it")
-    startShape(point)
+    startShape(coordinates)
   }
 }
 
-
-function sameSide(p1,p2, a,b) {
-    var xa = []
-    var xb = []
-    var xb2 = []
-    var cp1 = []
-    var cp2 = []
-
-    vec3.subtract(xa, b, a)
-    vec3.subtract(xb, p1, a)
-    vec3.cross(cp1, xa, xb)
-
-    vec3.subtract(xb2, p2, a)
-    vec3.cross(cp2, xa, xb2)
-
-    var isSame = vec3.dot(cp1, cp2) >= 0
-
-    return isSame
-}
-
-
-function fastPointInTriangle(p, triangle) {
-
-  // from http://www.blackpawn.com/texts/pointinpoly/
-
-  var a = triangle[0] 
-  var b = triangle[1] 
-  var c = triangle[2] 
-
-  var isInside =
-    sameSide(p,a, b,c) 
-    && sameSide(p,b, a,c)
-    && sameSide(p,c, a,b)
-
-  return isInside
-}
-
-var p = [2,1,0]
-var a = [1,1,0]
-var b = [2,3,0]
-var c = [4,1,0]
-
-pointInTriangle(p, [a,b,c])
 
 function pointInTriangle(p, triangle) {
   
@@ -97,34 +55,40 @@ function pointInTriangle(p, triangle) {
   vec3.subtract(probeB, b, p)
   vec3.subtract(probeC, c, p)
 
-  var angles = [
-    vec3.angle(probeA, probeB),
-    vec3.angle(probeB, probeC),
-    vec3.angle(probeC, probeA),
-  ]
-
   var totalAngle =
     vec3.angle(probeA, probeB)
     + vec3.angle(probeB, probeC)
     + vec3.angle(probeC, probeA)
 
-  var isInside = 2*Math.PI - totalAngle < 0.01
+  var angles = [
+    vec3.angle(probeA, probeB)
+    , vec3.angle(probeB, probeC)
+    , vec3.angle(probeC, probeA)
+  ]
+
+  var isInside = 2*Math.PI - totalAngle < 0
 
   return isInside
 }
 
+function startStretch(coordinates, stroke) {
+  var pathIndex = stroke.paths.length
 
+  var path = stroke.paths[pathIndex] = [coordinates]
 
+  handleMove = addPoint.bind(null, path)
+}
 
-function startShape(point) {
+function startShape(coordinates) {
   var stroke = {
-    path: [point]
+    paths: []
   }
+  stroke.paths.push([coordinates])
 
   strokes.push(stroke)
 
-  handleMove = addPoint.bind(null, stroke.path)
-  handleUp = finishShape.bind(null, stroke.path)
+  handleMove = addPoint.bind(null, stroke.paths[0])
+  handleUp = finishShape
 }
 
 function addPoint(path, event) {
@@ -137,7 +101,7 @@ function drawStrokes() {
   var shapes = []
   triangles = []
   strokes.forEach(function(stroke) {
-    shapes = shapes.concat(pathToShapes(stroke))
+    shapes = shapes.concat(strokeToShapes(stroke))
   })
 
   drawScene(shapes)
@@ -145,27 +109,29 @@ function drawStrokes() {
 
 var shapes = []
 
-function finishShape(path, event) {
+function finishShape() {
   handleMove = null
   handleUp = null
 }
 
-function pathToShapes(stroke) {
-  var path = stroke.path
-
-  var last = path.length-1
-
-  var firstPoint = [
-    path[0][0], 
-    -path[0][1],
+function screenCoordToPoint(point) {
+  return [
+    point[0],
+    -point[1],
     0.0
   ]
+}
 
-  var lastPoint = [
-    path[last][0],
-    -path[last][1],
-    0.0
-  ]
+function strokeToShapes(stroke) {
+  var linePath = stroke.paths[0]
+  var trianglePath = stroke.paths[1]
+
+  var lineStart = linePath[0]
+  var lineEnd = linePath[linePath.length-1]
+
+  var firstPoint = screenCoordToPoint(lineStart)
+
+  var lastPoint = screenCoordToPoint(lineEnd)
 
   var out = []
   var midPoint = []
@@ -184,6 +150,17 @@ function pathToShapes(stroke) {
   vec3.rotateZ(midPoint, out, firstPoint, thickness)
 
   vec3.rotateZ(otherMidPoint, out, firstPoint, -thickness)
+
+  if (trianglePath && trianglePath.length) {
+    var dragStart = screenCoordToPoint(trianglePath[0])
+    var dragEnd = screenCoordToPoint(trianglePath[trianglePath.length-1])
+
+    var drag = []
+    vec3.subtract(drag, dragEnd, dragStart)
+
+    vec3.add(midPoint, midPoint, drag)
+    vec3.add(otherMidPoint, otherMidPoint, drag)
+  }
 
   triangles.push([firstPoint, midPoint, lastPoint, stroke])
 
