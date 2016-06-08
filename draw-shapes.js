@@ -1,4 +1,4 @@
-var shapeEditor = (function() {
+var drawShapes = (function() {
 
   var handleMove
 

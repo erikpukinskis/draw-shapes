@@ -1,0 +1,9 @@
+{
+  "name": "draw-shapes",
+  "version": "0.0.0",
+  "description": "draw geometric shapes by touching and dragging",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/erikpukinskis/draw-shapes.git"
+  }
+}

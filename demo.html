@@ -8,14 +8,14 @@ canvas {
 <script src="../build/gl-matrix.js"></script>
 <script src="../build/draw-scene.js"></script>
 
-<canvas width="400" height="400" onmousedown="shapeEditor.down(event)"></canvas>
+<canvas width="400" height="400" onmousedown="drawShapes.down(event)"></canvas>
 
-<script src="shape-editor.js"></script>
+<script src="draw-shapes.js"></script>
 
 <script>
 
-window.onmousemove = shapeEditor.move
-window.onmouseup = shapeEditor.up
+window.onmousemove = drawShapes.move
+window.onmouseup = drawShapes.up
 
 </script>
 
