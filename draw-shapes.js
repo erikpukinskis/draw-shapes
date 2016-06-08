@@ -54,7 +54,7 @@ var drawShapes = (function() {
       , vec3.angle(probeC, probeA)
     ]
 
-    var isInside = 2*Math.PI - totalAngle < 0
+    var isInside = 2*Math.PI - totalAngle < 0.0001
 
     return isInside
   }
@@ -112,6 +112,8 @@ var drawShapes = (function() {
   }
 
   function strokeToShapes(stroke) {
+    var shapes = []
+
     var linePath = stroke.paths[0]
     var trianglePath = stroke.paths[1]
 
@@ -153,15 +155,16 @@ var drawShapes = (function() {
 
     triangles.push([firstPoint, midPoint, lastPoint, stroke])
 
+    shapes.push(pointsToShape(firstPoint, midPoint, lastPoint))
+
     triangles.push([firstPoint, otherMidPoint, lastPoint, stroke])
 
-    return [
-      triangle(firstPoint, midPoint, lastPoint),
-      triangle(firstPoint, otherMidPoint, lastPoint)
-    ]
+    shapes.push(pointsToShape(firstPoint, otherMidPoint, lastPoint))
+
+    return shapes
   }
 
-  function triangle(a,b,c) {
+  function pointsToShape(a,b,c) {
     return {
       position: [0.0, 0.0, 0.0],
       verticies: a.concat(b,c),
@@ -182,9 +185,9 @@ var drawShapes = (function() {
     far: 600.0,
     pitch: 0.0,
     yaw: 0.0,
-    xPos: -205.0,
-    yPos: 205.0,
-    zPos: -340.0  
+    xPos: -210,
+    yPos: 208,
+    zPos: -358.0  
   }
 
   drawScene.init(camera)
