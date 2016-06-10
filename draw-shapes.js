@@ -5,7 +5,7 @@ var drawShapes = (function() {
   var strokes = []
   var triangles = []
 
-  function down(event) {
+  function handleDown(event) {
     var coordinates = [event.clientX, event.clientY]
 
     var stroke
@@ -65,7 +65,7 @@ var drawShapes = (function() {
     var path = stroke.paths[pathIndex] = [coordinates]
 
     handleMove = addPoint.bind(null, path)
-    handleUp = finish
+    handleUp = finish.bind(null, stroke)
   }
 
   function startShape(coordinates) {
@@ -98,7 +98,12 @@ var drawShapes = (function() {
 
   var shapes = []
 
-  function finish() {
+  function finish(stroke) {
+    if (stroke && stroke.paths && stroke.paths[1] && !stroke.is2d) {
+      stroke.paths.pop()
+      drawStrokes()
+    }
+
     handleMove = null
     handleUp = null
   }
@@ -143,7 +148,7 @@ var drawShapes = (function() {
 
     vec3.rotateZ(otherMidPoint, out, firstPoint, -thickness)
 
-    var is2d = false
+    stroke.is2d = false
 
     if (trianglePath && trianglePath.length) {
       var dragStart = screenCoordToPoint(trianglePath[0])
@@ -160,7 +165,7 @@ var drawShapes = (function() {
       var convergence = Math.min(1.0, vec3.distance(dragStart, dragEnd) / 50.0)
 
       if (convergence > 0.99) {
-        is2d = true
+        stroke.is2d = true
       }
 
       var remainder = []
@@ -181,7 +186,7 @@ var drawShapes = (function() {
 
     shapes.push(pointsToShape(firstPoint, midPoint, lastPoint))
 
-    if (!is2d) {
+    if (!stroke.is2d) {
       triangles.push([firstPoint, otherMidPoint, lastPoint, stroke])
 
       shapes.push(pointsToShape(firstPoint, otherMidPoint, lastPoint))
@@ -219,7 +224,7 @@ var drawShapes = (function() {
   drawScene.init(camera)
 
   var editor = {
-    down: down,
+    down: handleDown,
     move: function(event) {
       if (!handleMove) { return }
       handleMove(event)
