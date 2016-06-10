@@ -125,12 +125,13 @@ var drawShapes = (function() {
     var lastPoint = screenCoordToPoint(lineEnd)
 
     var out = []
+    var firstSide = []
     var midPoint = []
     var otherMidPoint = []
 
-    vec3.subtract(out, lastPoint, firstPoint)
+    vec3.subtract(firstSide, lastPoint, firstPoint)
 
-    vec3.scale(out, out, 0.5)
+    vec3.scale(out, firstSide, 0.5)
 
     vec3.add(out, firstPoint, out)
 
@@ -142,24 +143,49 @@ var drawShapes = (function() {
 
     vec3.rotateZ(otherMidPoint, out, firstPoint, -thickness)
 
+    var is2d = false
+
     if (trianglePath && trianglePath.length) {
       var dragStart = screenCoordToPoint(trianglePath[0])
       var dragEnd = screenCoordToPoint(trianglePath[trianglePath.length-1])
 
+      var lastSide = []
+
+      vec3.subtract(lastSide, dragEnd, firstPoint)
+
       var drag = []
       vec3.subtract(drag, dragEnd, dragStart)
 
+
+      var convergence = Math.min(1.0, vec3.distance(dragStart, dragEnd) / 50.0)
+
+      if (convergence > 0.99) {
+        is2d = true
+      }
+
+      var remainder = []
+
       vec3.add(midPoint, midPoint, drag)
+      vec3.subtract(remainder, dragEnd, midPoint)
+      vec3.scale(remainder, remainder, convergence)
+      vec3.add(midPoint, midPoint, remainder)
+
+
       vec3.add(otherMidPoint, otherMidPoint, drag)
+      vec3.subtract(remainder, dragEnd, otherMidPoint)
+      vec3.scale(remainder, remainder, convergence)
+      vec3.add(otherMidPoint, otherMidPoint, remainder)
     }
 
     triangles.push([firstPoint, midPoint, lastPoint, stroke])
 
     shapes.push(pointsToShape(firstPoint, midPoint, lastPoint))
 
-    triangles.push([firstPoint, otherMidPoint, lastPoint, stroke])
+    if (!is2d) {
+      triangles.push([firstPoint, otherMidPoint, lastPoint, stroke])
 
-    shapes.push(pointsToShape(firstPoint, otherMidPoint, lastPoint))
+      shapes.push(pointsToShape(firstPoint, otherMidPoint, lastPoint))
+    }
 
     return shapes
   }
