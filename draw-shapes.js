@@ -60,9 +60,9 @@ var drawShapes = (function() {
   }
 
   function startStretch(coordinates, stroke) {
-    var pathIndex = stroke.paths.length
 
-    var path = stroke.paths[pathIndex] = [coordinates]
+    var path = [coordinates]
+    stroke.paths.push(path)
 
     handleMove = addPoint.bind(null, path)
     handleUp = finish.bind(null, stroke)
@@ -150,7 +150,7 @@ var drawShapes = (function() {
 
     stroke.is2d = false
 
-    if (trianglePath && trianglePath.length) {
+    if (trianglePath && trianglePath.length > 1) {
       var dragStart = screenCoordToPoint(trianglePath[0])
       var dragEnd = screenCoordToPoint(trianglePath[trianglePath.length-1])
 
@@ -192,7 +192,96 @@ var drawShapes = (function() {
       shapes.push(pointsToShape(firstPoint, otherMidPoint, lastPoint))
     }
 
+    var rhombusPath = stroke.paths[2]
+
+    if (rhombusPath && rhombusPath.length > 1) {
+
+      var dragStart = screenCoordToPoint(rhombusPath[0])
+      var dragEnd = screenCoordToPoint(rhombusPath[rhombusPath.length-1])
+
+    }
+
     return shapes
+  }
+
+
+  var p1 = [1,2,0]
+  var p2 = [5,2,0]
+  var q1 = [1,0,0]
+  var q2 = [4,3,0]
+
+  var out = pointOfIntersection(p1,p2,q1,q2)
+
+  function pointOfIntersection(p, pPlusR, q, qPlusS) {
+
+    // from http://stackoverflow.com/a/565282/778946
+
+    var r = []
+    var s = []
+
+    vec3.subtract(r, pPlusR, p)
+    vec3.subtract(s, qPlusS, q)
+
+    var qMinusP = []
+
+    vec3.subtract(qMinusP, q, p)
+
+    var qMinusPCrossS = vec3.dot(qMinusP, s)
+    var qMinusPCrossR = vec3.dot(qMinusP, r)
+
+    var rCrossS = vec3.dot(r, s)
+
+    if ((rCrossS == 0) && (qMinusPCrossR == 0)) {
+
+      throw new Error("colinear")
+
+    } else if ((rCrossS == 0)
+      && (qMinusPCrossR) != 0) {
+
+      // parallel
+      return false
+
+    }
+
+    var pMinusQ = []
+    vec3.subtract(pMinusQ, p, q)
+    var pMinusQCrossR = vec3.dot(pMinusQ, r)
+    var sCrossR = vec3.dot(s, r)
+
+    var u = pMinusQCrossR / sCrossR
+    var u2 = qMinusPCrossR / rCrossS
+
+    var t = qMinusPCrossS / rCrossS
+
+    if ((rCrossS != 0) 
+      && (0 <= t) && (t <= 1)
+      && (0 <= u) && (u <= 1)) {
+
+      // nonintersecting
+      return false
+    }
+
+    var rScaledByT = []
+    vec3.scale(rScaledByT, r, t)
+
+    var sScaledByU = []
+    vec3.scale(sScaledByU, s, u)
+
+    var sScaledByU2 = []
+    vec3.scale(sScaledByU2, s, u2)
+
+
+    var intersectionT = []
+    vec3.add(intersectionT, pPlusR, rScaledByT)
+
+    var intersectionU = []
+    vec3.add(intersectionU, q, sScaledByU)
+
+    var intersectionU2 = []
+    vec3.add(intersectionU2, q, sScaledByU2)
+
+    debugger
+    return intersectionT
   }
 
   function pointsToShape(a,b,c) {
