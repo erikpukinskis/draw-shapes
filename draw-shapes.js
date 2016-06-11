@@ -228,8 +228,10 @@ var drawShapes = (function() {
 
     var qMinusPCrossS = vec3.dot(qMinusP, s)
     var qMinusPCrossR = vec3.dot(qMinusP, r)
-
     var rCrossS = vec3.dot(r, s)
+    var t = qMinusPCrossS / rCrossS
+
+
 
     if ((rCrossS == 0) && (qMinusPCrossR == 0)) {
 
@@ -245,13 +247,19 @@ var drawShapes = (function() {
 
     var pMinusQ = []
     vec3.subtract(pMinusQ, p, q)
-    var pMinusQCrossR = vec3.dot(pMinusQ, r)
-    var sCrossR = vec3.dot(s, r)
+    var pMinusQCrossR = []
+    vec3.cross(pMinusQCrossR, pMinusQ, r)
 
-    var u = pMinusQCrossR / sCrossR
-    var u2 = qMinusPCrossR / rCrossS
+    var sCrossR = []
+    vec3.cross(sCrossR, s, r)
 
-    var t = qMinusPCrossS / rCrossS
+    var u = []
+
+    vec3.divide(u, pMinusQCrossR, sCrossR)
+
+    var u = u[2]
+
+    console.log("u", u, "t", t)
 
     if ((rCrossS != 0) 
       && (0 <= t) && (t <= 1)
@@ -267,20 +275,16 @@ var drawShapes = (function() {
     var sScaledByU = []
     vec3.scale(sScaledByU, s, u)
 
-    var sScaledByU2 = []
-    vec3.scale(sScaledByU2, s, u2)
-
-
     var intersectionT = []
     vec3.add(intersectionT, pPlusR, rScaledByT)
 
     var intersectionU = []
     vec3.add(intersectionU, q, sScaledByU)
 
-    var intersectionU2 = []
-    vec3.add(intersectionU2, q, sScaledByU2)
+    if (!vec3.equals(intersectionT, intersectionU)) {
+      throw new Error("intersection via u is different than via t")
+    }
 
-    debugger
     return intersectionT
   }
 
