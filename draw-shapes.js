@@ -194,7 +194,6 @@ var drawShapes = (function() {
 
     if (stroke.bakedPoints < 3) {
 
-
       triangles.push([firstPoint, otherMidPoint, lastPoint, stroke])
 
       shapes.push(pointsToShape(
@@ -202,27 +201,39 @@ var drawShapes = (function() {
       ))
     }
 
-    var rhombusPath = stroke.paths[2]
-    if (rhombusPath && rhombusPath.length > 1) {
-      var two = triangleTwo(stroke, firstPoint, midPoint, rhombusPath)
+    var prevPoint = firstPoint
+    var nextPoint = midPoint
 
-      shapes.push(two)
+    for(var i=2; i<stroke.paths.length; i++) {
+      var path = stroke.paths[i]
+      if (path && path.length > 1) {
+
+        var newPoint = guessNewPoint(stroke, firstPoint, midPoint, path)
+
+        var shape = pointsToShape(prevPoint, newPoint, nextPoint)
+
+        triangles.push([prevPoint, newPoint, nextPoint, stroke])
+
+        shapes.push(shape)
+
+        nextPoint = newPoint
+      }
     }
 
     return shapes
   }
 
-  function triangleTwo(stroke, firstPoint, secondPoint, rhombusPath) {
+  function guessNewPoint(stroke, firstPoint, secondPoint, path) {
 
-    var dragStart = screenCoordToPoint(rhombusPath[0])
-    var dragEnd = screenCoordToPoint(rhombusPath[rhombusPath.length-1])
+    var dragStart = screenCoordToPoint(path[0])
+    var dragEnd = screenCoordToPoint(path[path.length-1])
 
     var r = vectorToIntersection(dragStart, dragEnd, firstPoint, secondPoint)
 
-    if (r == false || stroke.bakedPoints == 4) {
+    if (r == false) {
 
       newPoint = dragEnd
-      stroke.bakedPoints = 4
+      stroke.bakedPoints++
 
     } else {
       var distance = vec3.distance(dragStart, dragEnd)
@@ -244,9 +255,7 @@ var drawShapes = (function() {
       vec3.add(newPoint, dragStart, r)
     }
 
-    return pointsToShape(
-      firstPoint, newPoint, secondPoint
-    )
+    return newPoint
   }
 
 
