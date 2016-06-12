@@ -101,7 +101,7 @@ var drawShapes = (function() {
   function finish(stroke) {
     if (stroke && stroke.paths) {
 
-      if (stroke.paths.length == stroke.pointCount) {
+      if (stroke.paths.length == stroke.bakedPoints) {
         stroke.paths.pop()
       }
 
@@ -125,8 +125,6 @@ var drawShapes = (function() {
 
     var linePath = stroke.paths[0]
     var trianglePath = stroke.paths[1]
-    var rhombusPath = stroke.paths[2]
-    var isRhombus = rhombusPath && rhombusPath.length > 1
 
     var lineStart = linePath[0]
     var lineEnd = linePath[linePath.length-1]
@@ -154,7 +152,7 @@ var drawShapes = (function() {
 
     vec3.rotateZ(otherMidPoint, out, firstPoint, -thickness)
 
-    stroke.pointCount = 2
+    stroke.bakedPoints = 2
 
     if (trianglePath && trianglePath.length > 1) {
       var dragStart = screenCoordToPoint(trianglePath[0])
@@ -171,7 +169,7 @@ var drawShapes = (function() {
       var convergence = Math.min(1.0, vec3.distance(dragStart, dragEnd) / 50.0)
 
       if (convergence > 0.99) {
-        stroke.pointCount = 3
+        stroke.bakedPoints = 3
       }
 
       var remainder = []
@@ -194,7 +192,7 @@ var drawShapes = (function() {
       firstPoint, midPoint, lastPoint
     ))
 
-    if (stroke.pointCount < 3) {
+    if (stroke.bakedPoints < 3) {
       triangles.push([firstPoint, otherMidPoint, lastPoint, stroke])
 
       shapes.push(pointsToShape(
@@ -202,41 +200,52 @@ var drawShapes = (function() {
       ))
     }
 
-    if (isRhombus) {
-      var dragStart = screenCoordToPoint(rhombusPath[0])
-      var dragEnd = screenCoordToPoint(rhombusPath[rhombusPath.length-1])
+    var two = triangleTwo(stroke, firstPoint, midPoint, stroke.paths[2])
 
-      var r = vectorToIntersection(dragStart, dragEnd, firstPoint, midPoint)
-
-      if (r) {
-        var distance = vec3.distance(dragStart, dragEnd)
-
-        var base = 150
-
-        if (distance < 15) {
-          var scale = base + 15 - distance
-        } else {
-          var scale = base + distance - 5
-        }
-
-        scale = 1 + distance / scale
-
-
-        vec3.scale(r, r, scale)
-
-        var newPoint = []
-        vec3.add(newPoint, dragStart, r)
-      } else {
-        newPoint = dragEnd
-        stroke.pointCount = 4
-      }
-
-      shapes.push(pointsToShape(
-        firstPoint, newPoint, midPoint
-      ))
-    }
+    if (two) { shapes.push(two) }
 
     return shapes
+  }
+
+  function triangleTwo(stroke, firstPoint, secondPoint, rhombusPath) {
+
+    if (!rhombusPath || rhombusPath.length < 2) {
+      return
+    }
+
+    var dragStart = screenCoordToPoint(rhombusPath[0])
+    var dragEnd = screenCoordToPoint(rhombusPath[rhombusPath.length-1])
+
+    var r = vectorToIntersection(dragStart, dragEnd, firstPoint, secondPoint)
+
+    if (r == false || stroke.bakedPoints == 4) {
+
+      newPoint = dragEnd
+      stroke.bakedPoints = 4
+
+    } else {
+      var distance = vec3.distance(dragStart, dragEnd)
+
+      var base = 150
+
+      if (distance < 15) {
+        var scale = base + 15 - distance
+      } else {
+        var scale = base + distance - 5
+      }
+
+      scale = 1 + distance / scale
+
+
+      vec3.scale(r, r, scale)
+
+      var newPoint = []
+      vec3.add(newPoint, dragStart, r)
+    }
+
+    return pointsToShape(
+      firstPoint, newPoint, secondPoint
+    )
   }
 
 
