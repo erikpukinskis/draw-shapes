@@ -99,8 +99,12 @@ var drawShapes = (function() {
   var shapes = []
 
   function finish(stroke) {
-    if (stroke && stroke.paths && stroke.paths[1] && !stroke.is2d) {
-      stroke.paths.pop()
+    if (stroke && stroke.paths) {
+
+      if (stroke.paths.length == stroke.pointCount) {
+        stroke.paths.pop()
+      }
+
       drawStrokes()
     }
 
@@ -150,7 +154,7 @@ var drawShapes = (function() {
 
     vec3.rotateZ(otherMidPoint, out, firstPoint, -thickness)
 
-    stroke.is2d = false
+    stroke.pointCount = 2
 
     if (trianglePath && trianglePath.length > 1) {
       var dragStart = screenCoordToPoint(trianglePath[0])
@@ -167,7 +171,7 @@ var drawShapes = (function() {
       var convergence = Math.min(1.0, vec3.distance(dragStart, dragEnd) / 50.0)
 
       if (convergence > 0.99) {
-        stroke.is2d = true
+        stroke.pointCount = 3
       }
 
       var remainder = []
@@ -186,12 +190,16 @@ var drawShapes = (function() {
 
     triangles.push([firstPoint, midPoint, lastPoint, stroke])
 
-    shapes.push(pointsToShape(firstPoint, midPoint, lastPoint))
+    shapes.push(pointsToShape(
+      firstPoint, midPoint, lastPoint
+    ))
 
-    if (!stroke.is2d) {
+    if (stroke.pointCount < 3) {
       triangles.push([firstPoint, otherMidPoint, lastPoint, stroke])
 
-      shapes.push(pointsToShape(firstPoint, otherMidPoint, lastPoint))
+      shapes.push(pointsToShape(
+        firstPoint, otherMidPoint, lastPoint
+      ))
     }
 
     if (isRhombus) {
@@ -201,35 +209,38 @@ var drawShapes = (function() {
       var r = vectorToIntersection(dragStart, dragEnd, firstPoint, midPoint)
 
       if (r) {
-        vec3.scale(r, r, 1.1)
+        var distance = vec3.distance(dragStart, dragEnd)
+
+        var base = 150
+
+        if (distance < 15) {
+          var scale = base + 15 - distance
+        } else {
+          var scale = base + distance - 5
+        }
+
+        scale = 1 + distance / scale
+
+
+        vec3.scale(r, r, scale)
 
         var newPoint = []
         vec3.add(newPoint, dragStart, r)
       } else {
         newPoint = dragEnd
+        stroke.pointCount = 4
       }
 
-      shapes.push(pointsToShape(firstPoint, midPoint, newPoint))
-
-
-
-      // var b = []
-      // var c = []
-      // vec3.add(b, intersection, [-5,10,0])
-      // vec3.add(c, intersection, [5,10,0])
-
-      // shapes.push(pointsToShape(intersection, b, c))
+      shapes.push(pointsToShape(
+        firstPoint, newPoint, midPoint
+      ))
     }
 
     return shapes
   }
 
 
-  var iteration = 0
-
   function vectorToIntersection(p, pPlusR, q, qPlusS) {
-
-    iteration++
 
     // from http://stackoverflow.com/a/565282/778946
 
@@ -273,11 +284,6 @@ var drawShapes = (function() {
       return false
 
     }
-
-    // if (iteration % 10 == 0) {
-    //   console.log(p, pPlusR, q,qPlusS)
-    //   console.log("u", u, "t", t)
-    // }
 
     if ((rCrossS != 0) 
       && (0 <= t) && (t <= 1)
