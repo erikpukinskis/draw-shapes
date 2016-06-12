@@ -193,6 +193,8 @@ var drawShapes = (function() {
     ))
 
     if (stroke.bakedPoints < 3) {
+
+
       triangles.push([firstPoint, otherMidPoint, lastPoint, stroke])
 
       shapes.push(pointsToShape(
@@ -200,18 +202,17 @@ var drawShapes = (function() {
       ))
     }
 
-    var two = triangleTwo(stroke, firstPoint, midPoint, stroke.paths[2])
+    var rhombusPath = stroke.paths[2]
+    if (rhombusPath && rhombusPath.length > 1) {
+      var two = triangleTwo(stroke, firstPoint, midPoint, rhombusPath)
 
-    if (two) { shapes.push(two) }
+      shapes.push(two)
+    }
 
     return shapes
   }
 
   function triangleTwo(stroke, firstPoint, secondPoint, rhombusPath) {
-
-    if (!rhombusPath || rhombusPath.length < 2) {
-      return
-    }
 
     var dragStart = screenCoordToPoint(rhombusPath[0])
     var dragEnd = screenCoordToPoint(rhombusPath[rhombusPath.length-1])
