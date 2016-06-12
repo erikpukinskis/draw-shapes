@@ -121,6 +121,8 @@ var drawShapes = (function() {
 
     var linePath = stroke.paths[0]
     var trianglePath = stroke.paths[1]
+    var rhombusPath = stroke.paths[2]
+    var isRhombus = rhombusPath && rhombusPath.length > 1
 
     var lineStart = linePath[0]
     var lineEnd = linePath[linePath.length-1]
@@ -192,27 +194,42 @@ var drawShapes = (function() {
       shapes.push(pointsToShape(firstPoint, otherMidPoint, lastPoint))
     }
 
-    var rhombusPath = stroke.paths[2]
-
-    if (rhombusPath && rhombusPath.length > 1) {
-
+    if (isRhombus) {
       var dragStart = screenCoordToPoint(rhombusPath[0])
       var dragEnd = screenCoordToPoint(rhombusPath[rhombusPath.length-1])
 
+      var r = vectorToIntersection(dragStart, dragEnd, firstPoint, midPoint)
+
+      if (r) {
+        vec3.scale(r, r, 1.1)
+
+        var newPoint = []
+        vec3.add(newPoint, dragStart, r)
+      } else {
+        newPoint = dragEnd
+      }
+
+      shapes.push(pointsToShape(firstPoint, midPoint, newPoint))
+
+
+
+      // var b = []
+      // var c = []
+      // vec3.add(b, intersection, [-5,10,0])
+      // vec3.add(c, intersection, [5,10,0])
+
+      // shapes.push(pointsToShape(intersection, b, c))
     }
 
     return shapes
   }
 
 
-  var p1 = [1,2,0]
-  var p2 = [5,2,0]
-  var q1 = [1,0,0]
-  var q2 = [4,3,0]
+  var iteration = 0
 
-  var out = pointOfIntersection(p1,p2,q1,q2)
+  function vectorToIntersection(p, pPlusR, q, qPlusS) {
 
-  function pointOfIntersection(p, pPlusR, q, qPlusS) {
+    iteration++
 
     // from http://stackoverflow.com/a/565282/778946
 
@@ -222,15 +239,27 @@ var drawShapes = (function() {
     vec3.subtract(r, pPlusR, p)
     vec3.subtract(s, qPlusS, q)
 
+
     var qMinusP = []
-
     vec3.subtract(qMinusP, q, p)
+    var qMinusPCrossS = []
+    vec3.cross(qMinusPCrossS, qMinusP, s)
+    var rCrossS = []
+    vec3.cross(rCrossS, r, s)
+    var t = []
+    vec3.divide(t, qMinusPCrossS, rCrossS)
+    t = t[2]
 
-    var qMinusPCrossS = vec3.dot(qMinusP, s)
-    var qMinusPCrossR = vec3.dot(qMinusP, r)
-    var rCrossS = vec3.dot(r, s)
-    var t = qMinusPCrossS / rCrossS
 
+    var pMinusQ = []
+    vec3.subtract(pMinusQ, p, q)
+    var pMinusQCrossR = []
+    vec3.cross(pMinusQCrossR, pMinusQ, r)
+    var sCrossR = []
+    vec3.cross(sCrossR, s, r)
+    var u = []
+    vec3.divide(u, pMinusQCrossR, sCrossR)
+    u = u[2]
 
 
     if ((rCrossS == 0) && (qMinusPCrossR == 0)) {
@@ -245,21 +274,10 @@ var drawShapes = (function() {
 
     }
 
-    var pMinusQ = []
-    vec3.subtract(pMinusQ, p, q)
-    var pMinusQCrossR = []
-    vec3.cross(pMinusQCrossR, pMinusQ, r)
-
-    var sCrossR = []
-    vec3.cross(sCrossR, s, r)
-
-    var u = []
-
-    vec3.divide(u, pMinusQCrossR, sCrossR)
-
-    var u = u[2]
-
-    console.log("u", u, "t", t)
+    // if (iteration % 10 == 0) {
+    //   console.log(p, pPlusR, q,qPlusS)
+    //   console.log("u", u, "t", t)
+    // }
 
     if ((rCrossS != 0) 
       && (0 <= t) && (t <= 1)
@@ -276,16 +294,18 @@ var drawShapes = (function() {
     vec3.scale(sScaledByU, s, u)
 
     var intersectionT = []
-    vec3.add(intersectionT, pPlusR, rScaledByT)
+    vec3.add(intersectionT, p, rScaledByT)
 
     var intersectionU = []
     vec3.add(intersectionU, q, sScaledByU)
 
-    if (!vec3.equals(intersectionT, intersectionU)) {
-      throw new Error("intersection via u is different than via t")
+    var error = vec3.distance(intersectionT, intersectionU)
+
+    if (error > 0.001) {
+      throw new Error("t and u yield different intersections")
     }
 
-    return intersectionT
+    return rScaledByT
   }
 
   function pointsToShape(a,b,c) {
