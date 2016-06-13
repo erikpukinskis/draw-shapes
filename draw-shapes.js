@@ -70,14 +70,17 @@ var drawShapes = (function() {
 
   function startShape(coordinates) {
     var stroke = {
-      paths: []
+      paths: [],
+      triangles: [],
+      edges: []
     }
+
     stroke.paths.push([coordinates])
 
     strokes.push(stroke)
 
     handleMove = addPoint.bind(null, stroke.paths[0])
-    handleUp = finish
+    handleUp = finish.bind(null, stroke)
   }
 
   function addPoint(path, event) {
@@ -90,24 +93,31 @@ var drawShapes = (function() {
     var shapes = []
     triangles = []
     strokes.forEach(function(stroke) {
-      shapes = shapes.concat(strokeToShapes(stroke))
+      addStrokeToShapes(stroke, shapes)
     })
 
     drawScene(shapes)
   }
 
-  var shapes = []
-
   function finish(stroke) {
-    if (stroke && stroke.paths) {
 
-      if (stroke.paths.length == stroke.bakedPoints) {
-        stroke.paths.pop()
+    if (stroke.paths.length > 1) {
+      var triangle = stroke.newTriangle
+
+      stroke.triangles.push(triangle)
+
+      stroke.edges = stroke.edges.concat(stroke.newEdges)
+
+      if (stroke.deadEdge) {
+        stroke.edges[stroke.deadEdge] = "dead"
       }
 
-      drawStrokes()
+      stroke.newTriangle = false
+      stroke.newEdges = false
+
     }
 
+    drawStrokes()
     handleMove = null
     handleUp = null
   }
@@ -120,9 +130,29 @@ var drawShapes = (function() {
     ]
   }
 
-  function strokeToShapes(stroke) {
-    var shapes = []
+  function addStrokeToShapes(stroke, shapes) {
 
+    if (stroke.triangles.length < 1) {
+      return addDiamond(stroke, shapes)
+    }
+
+    for(var i=0; i<stroke.triangles.length; i++) {
+
+      var triangle = stroke.triangles[i]
+      var shape = pointsToShape.apply(null, triangle)
+      triangle.push(stroke)
+      triangles.push(triangle)
+      shapes.push(shape)
+    }
+
+    var freshPath = stroke.paths[i+1]
+
+    if (freshPath) {
+      addTentativeTriangle(stroke, shapes)
+    }
+  }
+
+  function addDiamond(stroke, shapes) {
     var linePath = stroke.paths[0]
     var trianglePath = stroke.paths[1]
 
@@ -152,7 +182,9 @@ var drawShapes = (function() {
 
     vec3.rotateZ(otherMidPoint, out, firstPoint, -thickness)
 
-    stroke.bakedPoints = 2
+    if (!stroke.bakedPoints) {
+      stroke.bakedPoints = 2
+    }
 
     if (trianglePath && trianglePath.length > 1) {
       var dragStart = screenCoordToPoint(trianglePath[0])
@@ -168,10 +200,6 @@ var drawShapes = (function() {
 
       var convergence = Math.min(1.0, vec3.distance(dragStart, dragEnd) / 50.0)
 
-      if (convergence > 0.99) {
-        stroke.bakedPoints = 3
-      }
-
       var remainder = []
 
       vec3.add(midPoint, midPoint, drag)
@@ -179,12 +207,19 @@ var drawShapes = (function() {
       vec3.scale(remainder, remainder, convergence)
       vec3.add(midPoint, midPoint, remainder)
 
-
       vec3.add(otherMidPoint, otherMidPoint, drag)
       vec3.subtract(remainder, dragEnd, otherMidPoint)
       vec3.scale(remainder, remainder, convergence)
       vec3.add(otherMidPoint, otherMidPoint, remainder)
     }
+
+    stroke.newTriangle = [firstPoint, midPoint, lastPoint]
+    stroke.newEdges = [
+      [firstPoint, midPoint],
+      [midPoint, lastPoint],
+      [lastPoint, firstPoint]
+    ]
+
 
     triangles.push([firstPoint, midPoint, lastPoint, stroke])
 
@@ -192,81 +227,85 @@ var drawShapes = (function() {
       firstPoint, midPoint, lastPoint
     ))
 
-    if (stroke.bakedPoints < 3) {
-
+    if (convergence > 0.99) {
+      stroke.bakedPoints = 3
+    } else {
       triangles.push([firstPoint, otherMidPoint, lastPoint, stroke])
 
       shapes.push(pointsToShape(
         firstPoint, otherMidPoint, lastPoint
       ))
     }
-
-
-    var segments = [
-      [firstPoint, midPoint, "from1"],
-      [firstPoint, lastPoint, "orig"],
-      [lastPoint, midPoint, "from2"],
-    ]
-
-    for(var i=2; i<stroke.paths.length; i++) {
-
-      for(var j=0; j<3; j++) {
-        var points = segments[j]
-        var path = stroke.paths[i]
-        if (path && path.length > 1) {
-
-          var newPoint = guessNewPoint(stroke, points[0], points[1], path)
-
-          var shape = pointsToShape(points[0], newPoint, points[1])
-
-          triangles.push([points[0], newPoint, points[1], stroke])
-
-          shapes.push(shape)
-        }
-
-      }
-    }
-
-    return shapes
   }
 
-  function guessNewPoint(stroke, firstPoint, secondPoint, path) {
+  function addTentativeTriangle(stroke, shapes) {
+
+    var path = stroke.paths[stroke.paths.length-1]
 
     var dragStart = screenCoordToPoint(path[0])
     var dragEnd = screenCoordToPoint(path[path.length-1])
 
-    var r = vectorToIntersection(dragStart, dragEnd, firstPoint, secondPoint)
+    stroke.edges.forEach(tryToPush)
 
-    if (r) {
-      var distance = vec3.distance(dragStart, dragEnd)
+    var pushedEdge = false
 
-      var base = 150
+    function tryToPush(edge, i) {
+      if (edge == "dead") { return }
 
-      if (distance < 15) {
-        var scale = base + 15 - distance
+      var intersection = vectorToIntersection(dragStart, dragEnd, edge[0], edge[1])
+
+      if (intersection.doesIntersect) {
+        pushedEdge = i
       } else {
-        var scale = base + distance - 5
+        return 
       }
 
-      scale = 1 + distance / scale
+      if (intersection.t < 1) {
+        var newPoint = dragEnd
 
+        stroke.newTriangle = [edge[0], edge[1], newPoint]
+        stroke.newEdges = [
+          [edge[0], newPoint],
+          [newPoint, edge[1]]
+        ]
+        stroke.deadEdge = pushedEdge
 
-      vec3.scale(r, r, scale)
+      } else {
+        var newPoint = bulge(dragStart, dragEnd, intersection.rScaledByT)
+      }
 
-      var newPoint = []
-      vec3.add(newPoint, dragStart, r)
+      var shape = pointsToShape(edge[0], newPoint, edge[1])
 
-      return newPoint
+      if (pushedEdge !== false) {
+        shapes.push(shape)
+        pushedOne = true
+      }
+    }
+
+  }
+
+  function bulge(dragStart, dragEnd, rScaledByT) {
+
+    var distance = vec3.distance(dragStart, dragEnd)
+
+    var base = 150
+
+    if (distance < 15) {
+      var scale = base + 15 - distance
     } else {
+      var scale = base + distance - 5
+    }
 
-      newPoint = dragEnd
-      stroke.bakedPoints++
+    scale = 1 + distance / scale
 
-    }      
+    var out = []
+    vec3.scale(out, rScaledByT, scale)
+
+    var newPoint = []
+    vec3.add(newPoint, dragStart, out)
 
     return newPoint
   }
-
 
   function vectorToIntersection(p, pPlusR, q, qPlusS) {
 
@@ -314,36 +353,15 @@ var drawShapes = (function() {
 
     var error = vec3.distance(intersectionT, intersectionU)
 
-
-    if ((rCrossS == 0) && (qMinusPCrossR == 0)) {
-
-      throw new Error("colinear")
-
-    } else if ((rCrossS == 0)
-      && (qMinusPCrossR) != 0) {
-
-      // parallel
-      return false
-
-    }
-
-    if ((rCrossS != 0) 
-      && (0 <= t) && (t <= 1)
-      && (0 <= u) && (u <= 1)) {
-
-      // nonintersecting
-      return false
-    }
-
-
     if (error > 0.001) {
       throw new Error("t and u yield different intersections")
     }
 
-    if (u > 0 && t > 0) {
-      return rScaledByT
-    } else {
-      return false
+    return {
+      doesIntersect: u > 0 && u < 1 && t > 0,
+      rScaledByT: rScaledByT,
+      u: u,
+      t: t
     }
   }
 
