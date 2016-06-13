@@ -214,6 +214,7 @@ var drawShapes = (function() {
     }
 
     stroke.newTriangle = [firstPoint, midPoint, lastPoint]
+
     stroke.newEdges = [
       [firstPoint, midPoint],
       [midPoint, lastPoint],
@@ -263,11 +264,13 @@ var drawShapes = (function() {
       if (intersection.t < 1) {
         var newPoint = dragEnd
 
-        stroke.newTriangle = [edge[0], edge[1], newPoint]
+        stroke.newTriangle = [edge[0], newPoint, edge[1]]
+
         stroke.newEdges = [
           [edge[0], newPoint],
           [newPoint, edge[1]]
         ]
+
         stroke.deadEdge = pushedEdge
 
       } else {
