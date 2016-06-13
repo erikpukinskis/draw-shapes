@@ -201,22 +201,32 @@ var drawShapes = (function() {
       ))
     }
 
-    var prevPoint = firstPoint
-    var nextPoint = midPoint
+
+    var segments = [
+      [firstPoint, midPoint, "from1"],
+      [firstPoint, lastPoint, "orig"],
+      [lastPoint, midPoint, "from2"],
+    ]
 
     for(var i=2; i<stroke.paths.length; i++) {
-      var path = stroke.paths[i]
-      if (path && path.length > 1) {
 
-        var newPoint = guessNewPoint(stroke, firstPoint, midPoint, path)
+      for(var j=0; j<3; j++) {
+        var points = segments[j]
+        console.log(points[2])
+        var path = stroke.paths[i]
+        if (path && path.length > 1) {
 
-        var shape = pointsToShape(prevPoint, newPoint, nextPoint)
+          var newPoint = guessNewPoint(stroke, points[0], points[1], path)
 
-        triangles.push([prevPoint, newPoint, nextPoint, stroke])
+          console.log(newPoint ? "YES" : "no")
 
-        shapes.push(shape)
+          var shape = pointsToShape(points[0], newPoint, points[1])
 
-        nextPoint = newPoint
+          triangles.push([points[0], newPoint, points[1], stroke])
+
+          shapes.push(shape)
+        }
+
       }
     }
 
@@ -230,12 +240,7 @@ var drawShapes = (function() {
 
     var r = vectorToIntersection(dragStart, dragEnd, firstPoint, secondPoint)
 
-    if (r == false) {
-
-      newPoint = dragEnd
-      stroke.bakedPoints++
-
-    } else {
+    if (r) {
       var distance = vec3.distance(dragStart, dragEnd)
 
       var base = 150
@@ -253,7 +258,14 @@ var drawShapes = (function() {
 
       var newPoint = []
       vec3.add(newPoint, dragStart, r)
-    }
+
+      return newPoint
+    } else {
+
+      newPoint = dragEnd
+      stroke.bakedPoints++
+
+    }      
 
     return newPoint
   }
@@ -291,6 +303,23 @@ var drawShapes = (function() {
     vec3.divide(u, pMinusQCrossR, sCrossR)
     u = u[2]
 
+    console.log(u, t)
+
+
+    var rScaledByT = []
+    vec3.scale(rScaledByT, r, t)
+
+    var sScaledByU = []
+    vec3.scale(sScaledByU, s, u)
+
+    var intersectionT = []
+    vec3.add(intersectionT, p, rScaledByT)
+
+    var intersectionU = []
+    vec3.add(intersectionU, q, sScaledByU)
+
+    var error = vec3.distance(intersectionT, intersectionU)
+
 
     if ((rCrossS == 0) && (qMinusPCrossR == 0)) {
 
@@ -312,25 +341,18 @@ var drawShapes = (function() {
       return false
     }
 
-    var rScaledByT = []
-    vec3.scale(rScaledByT, r, t)
-
-    var sScaledByU = []
-    vec3.scale(sScaledByU, s, u)
-
-    var intersectionT = []
-    vec3.add(intersectionT, p, rScaledByT)
-
-    var intersectionU = []
-    vec3.add(intersectionU, q, sScaledByU)
-
-    var error = vec3.distance(intersectionT, intersectionU)
 
     if (error > 0.001) {
       throw new Error("t and u yield different intersections")
+    } else {
+      console.log("error is", error)
     }
 
-    return rScaledByT
+    if (u > 0 && t > 0) {
+      return rScaledByT
+    } else {
+      return false
+    }
   }
 
   function pointsToShape(a,b,c) {
