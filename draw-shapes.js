@@ -212,13 +212,10 @@ var drawShapes = (function() {
 
       for(var j=0; j<3; j++) {
         var points = segments[j]
-        console.log(points[2])
         var path = stroke.paths[i]
         if (path && path.length > 1) {
 
           var newPoint = guessNewPoint(stroke, points[0], points[1], path)
-
-          console.log(newPoint ? "YES" : "no")
 
           var shape = pointsToShape(points[0], newPoint, points[1])
 
@@ -303,9 +300,6 @@ var drawShapes = (function() {
     vec3.divide(u, pMinusQCrossR, sCrossR)
     u = u[2]
 
-    console.log(u, t)
-
-
     var rScaledByT = []
     vec3.scale(rScaledByT, r, t)
 
@@ -344,8 +338,6 @@ var drawShapes = (function() {
 
     if (error > 0.001) {
       throw new Error("t and u yield different intersections")
-    } else {
-      console.log("error is", error)
     }
 
     if (u > 0 && t > 0) {
