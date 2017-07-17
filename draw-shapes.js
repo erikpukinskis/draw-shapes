@@ -1,3 +1,10 @@
+// While dragging a point out, if you get 1/2 way to the edge of the screen, the viewport starts zooming out, to a max speed at 3/4 of the way to the edge, at a slow, manageable speed. No acceleration, just a linear speedup to a comfortable cruise speed.
+
+// Maybe points are just a uniquely rotated and skewed quadrilateral. Like grains of geometric sand. Those are mirrored in the shape of the line-diamond.
+
+// You take a photo, and color swatches are placed throughout it. Drag the swatch and you get a fragment. Drag the fragment and you get a triangle. Tap and hold on a color to make a new swatch. Use the color changer to change a swatch, same as any polygon.
+
+
 var drawShapes = (function() {
 
   var handleMove
