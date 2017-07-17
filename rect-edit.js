@@ -23,57 +23,88 @@ library.using(
 
     var swatches = bridge.defineSingleton(
       "swatches",
-      [bridgeModule(lib, "web-element", bridge), bridgeModule(lib, "add-html", bridge)],
-      function(element, addHtml) {
+      [
+        bridgeModule(lib, "web-element", bridge),
+        bridgeModule(lib, "add-html", bridge),
+        virtualCanvas
+      ],
+      function(element, addHtml, canvas) {
 
         function Palette() {
           this.swatches = []
-          this.length = 0
         }
+
+        var img
 
         Palette.prototype.add = function(color) {
           var el = element(".swatch")
           el.appendStyles({
-            "width": "1px",
-            "height": "1px",
+            "width": "2px",
+            "height": "2px",
             "background": color,
             "position": "absolute",
-            "transition": "transform 2s linear"
+            "transition": "transform 2s linear",
+            "border-radius": "1px",
           })
           el.assignId()
 
+          if (!img) {
+            var selfie = document.querySelector(".selfie")
+            img = {
+              x: selfie.offsetLeft,
+              y: selfie.offsetTop,
+            }
+          }
+
           addHtml(el.html())
 
-          var swatch = new Swatch(el.id)
-          this.swatches.push(swatch)
-          this.swatches.active = swatch
-          this.length++
+          var swatch = new Swatch(el.id, this)
+
           return swatch
         }
 
 
-        function Swatch(id) {
+        function Swatch(id, palette) {
           this.id = id
+          this.palette = palette
+          this.palette.active = this
+          this.palette.swatches.push(this)
+
           this.node = document.getElementById(id)
           setTimeout(this.pool.bind(this))
-          this.interval = setInterval(this.pool.bind(this), 2000)
+          this.interval = setInterval(this.pool.bind(this), 1000)
           this.size = 0
           this.node.onmouseup = this.lift.bind(this)
+          this.node.onmousemove = this.track.bind(this)
         }
 
         Swatch.prototype.pool = function() {
-          this.size += 25
+          this.size += 10 - this.size/10
           var width = Math.ceil(Math.sqrt(this.size))
           this.node.style.transform = "scale("+this.size+")"
         }
 
         Swatch.prototype.lift = function() {
           clearInterval(this.interval)
+          this.palette.active = null
+        }
+
+        Swatch.prototype.track = function(event) {
+
+          if (this.palette.active != this) { return }
+
+          var x = event.clientX - img.x
+          var y = event.clientY - img.y
+
+          var color = canvas.getContext("2d").getImageData(x, y, 1, 1).data
+          var rgb = "rgb("+color[0]+", "+color[1]+", "+color[2]+")"
+
+          this.node.style.left = event.clientX+"px"
+          this.node.style.top = event.clientY+"px"
+          this.node.style.background = rgb
         }
 
         Swatch.prototype.setPosition = function(left,top) {
-          this.node.style.left = left+"px"
-          this.node.style.top = top+"px"
         }
 
         return new Palette()
@@ -81,32 +112,47 @@ library.using(
     )
 
     var poolColor = bridge.defineFunction(
-      [virtualCanvas, swatches],
-      function poolColor(canvas, swatches, event) {
-      var color = canvas.getContext("2d").getImageData(event.offsetX, event.offsetY, 1, 1).data
-      var rgb = "rgb("+color[0]+", "+color[1]+", "+color[2]+")"
-
-      if (swatches.length < 1) {
-        var swatch = swatches.add(rgb)
-        swatch.setPosition(event.clientX, event.clientY)
-      }
-
-    })
-
-    var releaseColor = bridge.defineFunction(
       [swatches],
-      function releaseColor(swatches) {
-        console.log("do")
-        swatches.active.lift()
+      function poolColor(swatches, event) {
+        event.preventDefault()
+        if (!swatches.active) {
+          var swatch = swatches.add()
+          swatch.track(event)
+        }
       }
     )
 
-    var page = element([
-      element("Step 1: Touch the picture to pool colors and make a color palette"),
-      element("img.selfie", {
+    var withActiveSwatch = bridge.defineFunction(
+      [swatches],
+      function withActiveSwatch(swatches, action) {
+        if (!swatches.active) { return }
+        swatches.active[action]()
+      }
+    )
+
+    var selfie = element(
+      "img.selfie",
+      {
         src: "/selfie.png",
         onmousedown: poolColor.withArgs(bridge.event).evalable(),
-        onmouseup: releaseColor.withArgs().evalable()}),
+        onmouseup: withActiveSwatch.withArgs("lift").evalable(),
+        onmousemove: withActiveSwatch.withArgs("track", bridge.event).evalable()
+      }
+    )
+
+    var selfieStyle = element.style(".selfie, .swatch", {
+      "cursor": "pointer",
+    })
+
+    var imgStyle = element.style(".selfie::selection", {
+      "background-color": "transparent",
+      "color": "#000",
+    })
+
+    var page = element([
+      element("Step 1: Touch the picture to pool colors and make a color palette"),
+      selfie,
+      element.stylesheet(selfieStyle, imgStyle),
     ])
 
     host.onSite(function(site) {
