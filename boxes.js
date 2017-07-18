@@ -6,16 +6,39 @@ library.using(
 
     var bridge = new BrowserBridge()
 
+    var virtualCanvas = bridge.defineSingleton("virtualCanvas", function() {
+      var canvas = document.createElement('canvas')
+      return canvas
+    })
+
+    bridge.domReady(
+      [virtualCanvas],
+      function loadImage(canvas) {
+        var img = document.querySelector(".trace")
+        canvas.width = img.width;
+        canvas.height = img.height;
+        canvas.getContext("2d").drawImage(img, 0, 0, img.width, img.height)
+      }
+    )
+
     var swatches = bridge.defineSingleton(
       "swatches",
-      [bridgeModule(lib, "web-element", bridge), bridgeModule(lib, "add-html", bridge)],
-      function(element, addHtml) {
+      [bridgeModule(lib, "web-element", bridge), bridgeModule(lib, "add-html", bridge), virtualCanvas],
+      function(element, addHtml, canvas) {
+
+
 
         function update(swatch, node) {
           node.style.left = swatch.bounds.minX+"px"
           node.style.top = swatch.bounds.minY+"px"
           node.style.width = (swatch.bounds.maxX - swatch.bounds.minX)+"px"
           node.style.height = (swatch.bounds.maxY - swatch.bounds.minY)+"px"
+        }
+
+        function getColor(x,y) {
+          var color = canvas.getContext("2d").getImageData(x, y, 1, 1).data
+          var rgb = "rgb("+color[0]+", "+color[1]+", "+color[2]+")"
+          return rgb
         }
 
         return {
@@ -34,7 +57,7 @@ library.using(
               ".swatch",
               element.style({
               "position": "absolute",
-              "background": "red",
+              "background": getColor(x,y),
               "width": "5px",
               "height": "5px",
               "left": x+"px",
@@ -71,13 +94,12 @@ library.using(
               bounds.maxY = y + extra
             }
 
-
             this.lastX = x
             this.lastY = y
 
-
             var node = document.getElementById(this.id)
             node.style.transition = "none"
+            node.style.background = getColor(x,y)
             update(this, node)
           }
 
