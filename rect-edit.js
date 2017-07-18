@@ -39,12 +39,11 @@ library.using(
         Palette.prototype.add = function(color) {
           var el = element(".swatch")
           el.appendStyles({
-            "width": "2px",
-            "height": "2px",
+            "width": "1px",
+            "height": "1px",
             "background": color,
             "position": "absolute",
             "transition": "transform 2s linear",
-            "border-radius": "1px",
           })
           el.assignId()
 
@@ -69,6 +68,8 @@ library.using(
           this.palette = palette
           this.palette.active = this
           this.palette.swatches.push(this)
+          this.bounds = {}
+          this.poolStart = new Date()
 
           this.node = document.getElementById(id)
           setTimeout(this.pool.bind(this))
@@ -79,9 +80,16 @@ library.using(
         }
 
         Swatch.prototype.pool = function() {
-          this.size += 10 - this.size/10
-          var width = Math.ceil(Math.sqrt(this.size))
-          this.node.style.transform = "scale("+this.size+")"
+          var now = new Date()
+          var dt = now - this.poolStart
+          var pooledAmount = dt/10
+          console.log(pooledAmount)
+
+          var pooledWidth = Math.ceil(Math.sqrt(pooledAmount))
+
+          var width = Math.max(pooledWidth, this.minWidth)
+
+          this.node.style.transform = "scale("+width+")"
         }
 
         Swatch.prototype.lift = function() {
@@ -96,12 +104,37 @@ library.using(
           var x = event.clientX - img.x
           var y = event.clientY - img.y
 
+          var bounds = this.bounds
+
+          if (!bounds.minX || x < this.bounds.minX) {
+            bounds.minX = x
+          }
+
+          if (!bounds.minY || y < bounds.minY) {
+            bounds.minY = y
+          }
+
+          if (!bounds.maxX || x > bounds.maxX) {
+            bounds.maxX = x
+          }
+
+          if (!bounds.maxY || y > bounds.maxY) {
+            bounds.maxY = y
+          }
+
           var color = canvas.getContext("2d").getImageData(x, y, 1, 1).data
           var rgb = "rgb("+color[0]+", "+color[1]+", "+color[2]+")"
 
-          this.node.style.left = event.clientX+"px"
-          this.node.style.top = event.clientY+"px"
+          var width = bounds.maxX - bounds.minX
+          var height = bounds.maxY - bounds.minY
+          var centerX = bounds.minX + width
+          var centerY = bounds.minY + width
+
+
+          this.node.style.left = centerX+"px"
+          this.node.style.top = centerX+"px"
           this.node.style.background = rgb
+          this.minWidth = width
         }
 
         Swatch.prototype.setPosition = function(left,top) {
@@ -124,9 +157,9 @@ library.using(
 
     var withActiveSwatch = bridge.defineFunction(
       [swatches],
-      function withActiveSwatch(swatches, action) {
+      function withActiveSwatch(swatches, action, arg) {
         if (!swatches.active) { return }
-        swatches.active[action]()
+        swatches.active[action](arg)
       }
     )
 
@@ -150,6 +183,7 @@ library.using(
     })
 
     var page = element([
+      element("p", "Fuck. I need to get out of this box. I need to stop using these drugs to push me along. The door. It's here. I know it. I can find it. I just have to reach...."),
       element("Step 1: Touch the picture to pool colors and make a color palette"),
       selfie,
       element.stylesheet(selfieStyle, imgStyle),
