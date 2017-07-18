@@ -26,8 +26,6 @@ library.using(
       [bridgeModule(lib, "web-element", bridge), bridgeModule(lib, "add-html", bridge), virtualCanvas],
       function(element, addHtml, canvas) {
 
-
-
         function update(swatch, node) {
           node.style.left = swatch.bounds.minX+"px"
           node.style.top = swatch.bounds.minY+"px"
@@ -54,9 +52,8 @@ library.using(
             this.lastY = y
 
             var el = element(
-              ".swatch",
+              ".swatch.active",
               element.style({
-              "position": "absolute",
               "background": getColor(x,y),
               "width": "5px",
               "height": "5px",
@@ -125,6 +122,7 @@ library.using(
     var up = bridge.defineFunction(
       [swatches],
       function up(swatches) {
+        document.getElementById(swatches.id).classList.remove("active")
         swatches.id = null
       }
     )
@@ -143,6 +141,15 @@ library.using(
       })
     )
 
+    var swatch = element.style(".swatch", {
+      "position": "absolute",
+      "opacity": "0.8",
+
+      ".active": {
+        "opacity": "1",
+      }
+    })
+
     var canvas = element(".canvas",
       element.style({
         "width": "100%",
@@ -158,9 +165,11 @@ library.using(
     )
 
     var page = element([
+      element("p", element.style({"margin-top": "400px"}), "Fuck. I need to get out of this box. I need to stop using these drugs to push me along. The door. It's here. I know it. I can find it. I just have to reach...."),
+      element("Step 1: Touch the picture to pool colors and make a color palette"),
       trace,
       canvas,
-      element.stylesheet(finger),
+      element.stylesheet(finger, swatch),
     ])
 
     host.onSite(function(site) {
