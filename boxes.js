@@ -120,33 +120,6 @@ library.using(
       }
     )
 
-    var down = bridge.defineFunction(
-      [swatches, virtualCanvas],
-      function down(swatches, canvas, event) {
-        var x = event.clientX
-        var y = event.clientY
-        if (canvas.__left) {
-          x = x - canvas.__left
-          y = y - canvas.__top
-        }
-        swatches.create(x, y)
-      }
-    )
-
-    var move = bridge.defineFunction(
-      [swatches, virtualCanvas],
-      function move(swatches, canvas, event) {
-        var x = event.clientX
-        var y = event.clientY
-        if (canvas.__left) {
-          x = x - canvas.__left
-          y = y - canvas.__top
-        }
-        if (!swatches.id) { return }
-        swatches.smudge(x, y)
-      }
-    )
-
     var universe = bridge.defineSingleton(
       "paintingUniverse",
       [bridgeModule(lib, "tell-the-universe", bridge)],
@@ -180,6 +153,39 @@ library.using(
       }
     )
 
+    var move = bridge.defineFunction(
+      [swatches, virtualCanvas, up],
+      function move(swatches, canvas, up, event) {
+
+        if (event.buttons == 0 && swatches.id) {
+          up(event)
+          return
+        }
+
+        var x = event.clientX
+        var y = event.clientY
+        if (canvas.__left) {
+          x = x - canvas.__left
+          y = y - canvas.__top
+        }
+        if (!swatches.id) { return }
+        swatches.smudge(x, y)
+      }
+    )
+
+    var down = bridge.defineFunction(
+      [swatches, virtualCanvas],
+      function down(swatches, canvas, event) {
+        var x = event.clientX
+        var y = event.clientY
+        if (canvas.__left) {
+          x = x - canvas.__left
+          y = y - canvas.__top
+        }
+        swatches.create(x, y)
+      }
+    )
+
     var trace = element(
       "img.trace",
       {"src": "/selfie.png"}
@@ -198,8 +204,8 @@ library.using(
       }), {
       onmousedown: down.withArgs(bridge.event).evalable(),
       onmousemove: move.withArgs(bridge.event).evalable(),
-      onmouseup: up.withArgs(bridge.event).evalable()}
-    )
+      onmouseup: up.withArgs(bridge.event).evalable(),
+    })
 
     var canvas = element(
       ".canvas",
