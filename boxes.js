@@ -133,7 +133,7 @@ library.using(
           var isFirst = !node
           if (isFirst) {
             node = document.querySelector(".universe")
-            node.style.display = "inline-block"
+            node.style.display = "inherit"
           }
           node.innerHTML += " <div class=\"statement\"></div>"
         })
@@ -232,6 +232,7 @@ library.using(
     var universeStyle = element.style(".universe", {
       "padding": "10px",
       "border": "2px solid blue",
+      "max-width": "400px",
 
       " .statement": {
         "display": "inline-block",
@@ -241,11 +242,34 @@ library.using(
       }
     })
 
+    var showSource = bridge.defineFunction(
+      [universe],
+      function showSource(universe) {
+        var node = document.querySelector(".universe-source")
+        var button = document.querySelector(".show-source")
+
+        if (node.style.display == "none") {
+          node.style.display = null
+          node.innerHTML = universe.source()
+          button.innerHTML = "Hide source"
+        } else {
+          node.style.display = "none"
+          button.innerHTML = "Show source"
+        }
+      }
+    )
+
     var universeEl = element(
       ".universe",
       element.style({"display": "none"}),
-      element("input", {value: "A wild universe appeared!"}),
-      element(".button", "Copy universe to clipboard")
+      element("input", {type: "text", value: "A wild universe appeared!"}),
+      element(
+        "textarea.universe-source",
+        element.style({"display": "none", "font-size": "0.6em", "min-height": "7em"})
+      ),
+      element("p",
+        element(".button.show-source", "View source", {onclick: showSource.evalable()})
+      )
     )
 
     var page = element([
