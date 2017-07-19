@@ -1,10 +1,11 @@
 var library = require("module-library")(require)
 
 library.using(
-  [library.ref(), "web-host", "browser-bridge", "web-element", "bridge-module", "add-html"],
-  function(lib, host, BrowserBridge, element, bridgeModule, addHtml) {
+  [library.ref(), "web-host", "browser-bridge", "web-element", "bridge-module", "add-html", "basic-styles"],
+  function(lib, host, BrowserBridge, element, bridgeModule, addHtml, basicStyles) {
 
     var bridge = new BrowserBridge()
+    basicStyles.addTo(bridge)
 
     var virtualCanvas = bridge.defineSingleton("virtualCanvas", function() {
       var canvas = document.createElement('canvas')
@@ -17,6 +18,11 @@ library.using(
         var img = document.querySelector(".trace")
         canvas.width = img.width;
         canvas.height = img.height;
+
+        var container = document.querySelector(".canvas")
+        canvas.__left = container.offsetLeft
+        canvas.__top = container.offsetTop
+
         canvas.getContext("2d").drawImage(img, 0, 0, img.width, img.height)
       }
     )
@@ -53,7 +59,8 @@ library.using(
 
           el.assignId()
 
-          addHtml(el.html())
+          var container = document.querySelector(".canvas")
+          addHtml.inside(container, el.html())
 
           return el
         }
@@ -114,17 +121,29 @@ library.using(
     )
 
     var down = bridge.defineFunction(
-      [swatches],
-      function down(swatches, event) {
-        swatches.create(event.clientX, event.clientY)
+      [swatches, virtualCanvas],
+      function down(swatches, canvas, event) {
+        var x = event.clientX
+        var y = event.clientY
+        if (canvas.__left) {
+          x = x - canvas.__left
+          y = y - canvas.__top
+        }
+        swatches.create(x, y)
       }
     )
 
     var move = bridge.defineFunction(
-      [swatches],
-      function move(swatches, event) {
+      [swatches, virtualCanvas],
+      function move(swatches, canvas, event) {
+        var x = event.clientX
+        var y = event.clientY
+        if (canvas.__left) {
+          x = x - canvas.__left
+          y = y - canvas.__top
+        }
         if (!swatches.id) { return }
-        swatches.smudge(event.clientX, event.clientY)
+        swatches.smudge(x, y)
       }
     )
 
@@ -141,9 +160,9 @@ library.using(
           var isFirst = !node
           if (isFirst) {
             node = document.querySelector(".universe")
-            node.innerHTML += "A wild universe appeared!"
+            node.style.display = "inline-block"
           }
-          node.innerHTML += " <div></div>"
+          node.innerHTML += " <div class=\"statement\"></div>"
         })
 
         return universe
@@ -163,20 +182,17 @@ library.using(
 
     var trace = element(
       "img.trace",
-      {"src": "/selfie.png"},
-      element.style({
-        "top": "0px",
-        "left": "0px",
-        "position": "absolute",
-      })
+      {"src": "/selfie.png"}
     )
 
-    var canvas = element(".canvas",
+    var touch = element(".touch-area",
       element.style({
         "width": "100%",
         "height": "100%",
         "top": "0px",
         "left": "0px",
+        "width": "100%",
+        "height": "100%",
         "position": "absolute",
         "z-index": "1",
       }), {
@@ -185,7 +201,16 @@ library.using(
       onmouseup: up.withArgs(bridge.event).evalable()}
     )
 
-    var fingerStyle = element.style(".swatch, .canvas", {
+    var canvas = element(
+      ".canvas",
+      element.style({
+        "position": "relative",
+        "display": "inline-block"
+      }),
+      [trace, touch]
+    )
+
+    var fingerStyle = element.style(".touch-area", {
       "cursor": "pointer",
     })
 
@@ -199,10 +224,10 @@ library.using(
     })
 
     var universeStyle = element.style(".universe", {
-      "background": "lightblue",
-      "padding": "5px",
+      "padding": "10px",
+      "border": "2px solid blue",
 
-      " div": {
+      " .statement": {
         "display": "inline-block",
         "width": "10px",
         "height": "10px",
@@ -210,13 +235,18 @@ library.using(
       }
     })
 
-    var page = element([
-      element(".universe", element.style({"margin-top": "500px"})),
+    var universeEl = element(
+      ".universe",
+      element.style({"display": "none"}),
+      element("input", {value: "A wild universe appeared!"}),
+      element(".button", "Copy universe to clipboard")
+    )
 
+    var page = element([
+      canvas,
+      universeEl,
       element("p", "Fuck. I need to get out of this box. I need to stop using these drugs to push me along. The door. It's here. I know it. I can find it. I just have to reach...."),
       element("Step 1: Touch the picture to pool colors and make a color palette"),
-      trace,
-      canvas,
       element.stylesheet(fingerStyle, swatchStyle, universeStyle),
     ])
 

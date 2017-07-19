@@ -9,7 +9,8 @@
     "browser-bridge": "*",
     "bridge-module": "*",
     "add-html": "*",
-    "tell-the-universe": "*"
+    "tell-the-universe": "*",
+    "basic-styles": "*"
   },
   "repository": {
     "type": "git",
