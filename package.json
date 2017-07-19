@@ -8,7 +8,8 @@
     "web-host": "*",
     "browser-bridge": "*",
     "bridge-module": "*",
-    "add-html": "*"
+    "add-html": "*",
+    "tell-the-universe": "*"
   },
   "repository": {
     "type": "git",
