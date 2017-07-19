@@ -131,11 +131,21 @@ library.using(
 
         universe.onStatement(function() {
           var isFirst = !node
+          var sourceVisible = document.querySelector(".universe-source").style.display != "none"
+
           if (isFirst) {
             node = document.querySelector(".universe")
             node.style.display = "inherit"
           }
+
           node.innerHTML += " <div class=\"statement\"></div>"
+
+          if (sourceVisible) {
+            var textarea = document.querySelector(".universe-source")
+            textarea.value = universe.source()
+            textarea.scrollTop = textarea.scrollHeight
+          }
+
         })
 
         return universe
