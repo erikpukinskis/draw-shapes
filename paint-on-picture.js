@@ -8,24 +8,9 @@ library.using(
     basicStyles.addTo(bridge)
 
     var virtualCanvas = bridge.defineSingleton("virtualCanvas", function() {
-      var canvas = document.createElement('canvas')
+      var canvas = document.createElement("canvas")
       return canvas
     })
-
-    bridge.domReady(
-      [virtualCanvas],
-      function loadImage(canvas) {
-        var img = document.querySelector(".trace")
-        canvas.width = img.width;
-        canvas.height = img.height;
-
-        var container = document.querySelector(".canvas")
-        canvas.__left = container.offsetLeft
-        canvas.__top = container.offsetTop
-
-        canvas.getContext("2d").drawImage(img, 0, 0, img.width, img.height)
-      }
-    )
 
     var swatches = bridge.defineSingleton(
       "swatches",
@@ -196,10 +181,7 @@ library.using(
       }
     )
 
-    var trace = element(
-      "img.trace",
-      {"src": "/selfie.png"}
-    )
+    var trace = element("img.trace")
 
     var touch = element(".touch-area",
       element.style({
@@ -282,7 +264,58 @@ library.using(
       )
     )
 
+    var loadTracingPicture = bridge.defineFunction(
+      [virtualCanvas],
+      function(canvas, event) {
+
+      var files = (event.target || window.event.srcElement).files
+      var isSupported = FileReader && files && files.length
+
+      if (isSupported) {
+        var reader = new FileReader()
+        reader.onload = setSrc.bind(null, reader)
+        reader.readAsDataURL(files[0])
+      } else {
+        throw new Error("No file support?")
+      }
+
+      function setSrc(reader) {
+        document.querySelector(".trace").src = reader.result
+        setTimeout(prepareCanvas)
+      }
+
+      function prepareCanvas() {
+        var img = document.querySelector(".trace")
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        var container = document.querySelector(".canvas")
+
+        canvas.__left = container.offsetLeft
+        canvas.__top = container.offsetTop
+
+        canvas.getContext("2d").drawImage(img, 0, 0, img.width, img.height)
+      }
+
+    }).withArgs(bridge.event)
+
+    var traceFileInput = element(
+      "input.trace-file-input", {
+      type: "file",
+      accept: "image/*",
+      onchange: loadTracingPicture.evalable()},
+      element.style({"display": "none"}))
+
+    var chooseFile = bridge.defineFunction(function() {
+      document.querySelector(".trace-file-input").click()
+    })
+
+    var chooseFileButton = element("button", "Choose a tracing picture", {onclick: chooseFile.evalable()})
+
     var page = element([
+      traceFileInput,
+      chooseFileButton,
       canvas,
       universeEl,
       element("p", "Fuck. I need to get out of this box. I need to stop using these drugs to push me along. The door. It's here. I know it. I can find it. I just have to reach...."),
@@ -292,8 +325,6 @@ library.using(
 
     host.onSite(function(site) {
       site.addRoute("get", "/boxes", bridge.requestHandler(page))
-
-      site.addRoute("get", "/selfie.png", site.sendFile(__dirname, "selfie.png"))
     })
 
   }
