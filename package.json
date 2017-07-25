@@ -6,11 +6,8 @@
   "dependencies": {
     "module-library": "*",
     "web-element": "*",
-    "web-host": "*",
-    "browser-bridge": "*",
     "bridge-module": "*",
     "add-html": "*",
-    "tell-the-universe": "*",
     "basic-styles": "*"
   },
   "repository": {
