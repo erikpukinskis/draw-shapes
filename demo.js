@@ -1,32 +1,36 @@
-var BrowserBridge = require("browser-bridge")
-var paintOnPicture = require("paint-on-picture")
-var bridgeModule = require("bridge-module")
-var tellTheUniverse = require("tell-the-universe")
-var express = require("express")()
+var library = require("module-library")(require)
 
-var bridge = new BrowserBridge()
+library.using(
+  [".", library.ref(), "browser-bridge", "bridge-module", "tell-the-universe", "express", "html-painting"],
+  function(paintOnPicture, lib,  BrowserBridge, bridgeModule, tellTheUniverse, express, htmlPainting) {
+    
+    var app = express()
+    var bridge = new BrowserBridge()
 
-var universe = bridge.defineSingleton(
-  "paintingUniverse",
-  [bridgeModule(lib, "tell-the-universe", bridge)],
-  function(tellTheUniverse) {
-    var node
+    var universe = bridge.defineSingleton(
+      "paintingUniverse",
+      [bridgeModule(lib, "tell-the-universe", bridge), bridgeModule(lib, "html-painting", bridge)],
+      function(tellTheUniverse, htmlPainting) {
+        var node
 
-    var universe = tellTheUniverse.called("painting").withNames({
-      paintSwatch: "paint-swatch"})
+        var universe = tellTheUniverse.called("paintings").withNames({
+          htmlPainting: htmlPainting})
 
-    universe.mute()
+        universe.mute()
 
-    universe.onStatement(function(call, args) {
-      console.log("called function "+call+" in universe. Arguments are", args)
-    })
+        universe.onStatement(function(call, args) {
+          console.log("called function "+call+" in universe. Arguments are", args)
+        })
 
-    return universe
+        return universe
+      }
+    )
+
+    var painting = paintOnPicture(bridge, universe)
+
+    app.get("/", bridge.requestHandler(painting))
+
+    app.listen(2001)
+
   }
 )
-
-var painting = paintOnPicture(bridge, universe)
-
-express.get("/", bridge.requestHandler(painting)
-
-express.start(2001)

@@ -108,11 +108,18 @@ module.exports = library.export(
       )
 
       var up = bridge.defineFunction(
-        [swatches, universe],
-        function up(swatches, universe) {
+        [swatches, universe, bridgeModule(lib, "html-painting", bridge)],
+        function up(swatches, universe, htmlPainting) {
           document.getElementById(swatches.id).classList.remove("active")
 
-          universe.do("paintSwatch", swatches.bounds, swatches.color)
+          var id = swatches.paintingId
+
+          if (!id) {
+            id = swatches.paintingId = htmlPainting()
+            universe.do("htmlPainting", id)
+          }
+
+          universe.do("htmlPainting.stroke", id, swatches.color, swatches.bounds)
 
           swatches.id = null
         }

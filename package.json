@@ -8,7 +8,11 @@
     "web-element": "*",
     "bridge-module": "*",
     "add-html": "*",
-    "basic-styles": "*"
+    "basic-styles": "*",
+    "html-painting": "*"
+  },
+  "devDependencies": {
+    "express": "*"
   },
   "repository": {
     "type": "git",
