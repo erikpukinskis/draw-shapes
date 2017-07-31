@@ -119,6 +119,8 @@ module.exports = library.export(
             universe.do("htmlPainting", id)
           }
 
+          htmlPainting.stroke(id, swatches.color, swatches.bounds)
+          
           universe.do("htmlPainting.stroke", id, swatches.color, swatches.bounds)
 
           swatches.id = null
@@ -134,8 +136,8 @@ module.exports = library.export(
             return
           }
 
-          var x = event.clientX
-          var y = event.clientY
+          var x = event.pageX
+          var y = event.pageY
           if (canvas.__left) {
             x = x - canvas.__left
             y = y - canvas.__top
@@ -148,8 +150,8 @@ module.exports = library.export(
       var down = bridge.defineFunction(
         [swatches, virtualCanvas],
         function down(swatches, canvas, event) {
-          var x = event.clientX
-          var y = event.clientY
+          var x = event.pageX
+          var y = event.pageY
           if (canvas.__left) {
             x = x - canvas.__left
             y = y - canvas.__top
