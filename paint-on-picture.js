@@ -295,7 +295,7 @@ module.exports = library.export(
       var page = element([
         traceFileInput,
         chooseFileButton,
-        canvas,
+        element("p", canvas),
         element.stylesheet(fingerStyle, swatchStyle),
       ])
 
